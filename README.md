@@ -133,3 +133,11 @@ Invoke-RestMethod -Uri "http://localhost:8000/transactions/1" -Method DELETE -He
 A Python dictionary uses a hash table internally. When you look up a key, Python computes its hash and jumps directly to the memory bucket — no scanning required. Linear search must check every element one by one, so time grows linearly with dataset size.
 
 **Alternative data structure:** A **Binary Search Tree (BST)** or **sorted array with binary search** offers O(log N) lookup with lower memory overhead than a hash map, making it a good middle ground when memory is constrained and keys are ordered.
+
+---
+
+## AI Use Disclosure
+
+Claude (Anthropic, Claude Sonnet 5.5) was used to help draft and structure the technical report for this project, including its endpoint, test-evidence and complexity tables and its appendix layout, based on the actual source code, this README, the API documentation, the XML dataset, the benchmark output and the screenshots in this repository. Claude was also used to review the code and documentation against the assignment rubric, to identify defects (for example in the received-money regex pattern and in `tests/test_api.sh`), and to check the API's behaviour on a scratch copy of the repository. All application code was written by the team, and the fixes suggested during that review were applied by the team.
+
+**Citation (APA 7):** Anthropic. (2026). *Claude Sonnet 5.5* [Large language model]. https://claude.ai

@@ -1,7 +1,7 @@
 # MoMo SMS REST API Documentation
 
 ## Overview
-This REST API provides secure access to Mobile Money (MoMo) SMS transaction records parsed from `modified_sms_v2.xml`. It supports full CRUD operations protected by HTTP Basic Authentication.
+This REST API provides access to Mobile Money (MoMo) SMS transaction records parsed from `modified_sms_v2.xml` (1,691 records). It supports full CRUD operations protected by HTTP Basic Authentication. The persistence layer is a local JSON file (`api/mock_db.json`), not a database.
 
 ---
 
@@ -23,42 +23,44 @@ All endpoints require HTTP Basic Authentication.
 Requests with missing or invalid credentials return `401 Unauthorized`.
 
 ### Why Basic Auth is Weak
-Basic Auth transmits credentials as a Base64-encoded string (not encrypted). Anyone intercepting the request can decode it instantly. It also has no token expiry, no revocation mechanism, and no scope control.
+Basic Auth transmits credentials as a Base64-encoded string — not encrypted. Anyone intercepting the request over plain HTTP can decode it instantly. It also has no token expiry, no revocation mechanism, and no scope control.
 
 ### Stronger Alternatives
 | Method | Benefit |
 |--------|---------|
-| **JWT (JSON Web Tokens)** | Stateless, signed tokens with expiry. No credential re-transmission per request. |
+| **JWT (JSON Web Tokens)** | Stateless signed tokens with expiry. Credentials are not re-sent per request. |
 | **OAuth 2.0** | Delegated authorization with scopes, refresh tokens, and third-party identity support. |
-| **API Keys + HTTPS** | Simple key-based auth over TLS — better than Basic Auth but still lacks expiry/scopes. |
+| **API Keys + HTTPS** | Simple key-based auth over TLS — better than Basic Auth but still lacks expiry and scopes. |
 
 ---
 
 ## Transaction Object Schema
 
+Fields are derived by regex from raw SMS body text. 330 of 1,691 records (19.5%) match no pattern (mostly bank-deposit messages) and retain default values of `"0.0"` for amount and `"Unknown"` for sender/receiver.
+
 ```json
 {
   "id": 1,
-  "address": "+250788000000",
-  "date": "1610000000000",
+  "address": "M-Money",
+  "date": "1609459200000",
   "type": "1",
-  "body": "You received 10,000 RWF from John Doe.",
-  "amount": "10000",
-  "sender": "John Doe",
-  "receiver": "Peter Kamau"
+  "body": "You have received 2,000 RWF from Jane Smith (250788000001) on your Mobile Money account at 2021-01-01 00:00:00.",
+  "amount": "2000",
+  "sender": "Jane Smith",
+  "receiver": "Account Holder"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | integer | Unique transaction identifier |
-| `address` | string | Phone number associated with the SMS |
-| `date` | string | Unix timestamp (milliseconds) |
-| `type` | string | SMS type code |
+| `id` | integer | Unique transaction identifier (auto-assigned) |
+| `address` | string | SMS sender address (e.g. `M-Money`) |
+| `date` | string | Unix timestamp in milliseconds |
+| `type` | string | SMS type code (`"1"` = received) |
 | `body` | string | Raw SMS message body |
-| `amount` | string | Transaction amount in RWF |
-| `sender` | string | Name of the sender |
-| `receiver` | string | Name of receiver |
+| `amount` | string | Transaction amount in RWF (`"0.0"` if unmatched) |
+| `sender` | string | Parsed sender name (`"Unknown"` if unmatched) |
+| `receiver` | string | Parsed receiver name (`"Unknown"` if unmatched) |
 
 ---
 
@@ -75,7 +77,7 @@ Retrieve all transaction records.
 
 **Request Example:**
 ```bash
-curl.exe -u admin:secret123 http://localhost:8000/transactions
+curl.exe -i -u admin:secret123 http://localhost:8000/transactions
 ```
 
 **Success Response — 200 OK:**
@@ -83,13 +85,13 @@ curl.exe -u admin:secret123 http://localhost:8000/transactions
 [
   {
     "id": 1,
-    "address": "+250788000000",
-    "date": "1610000000000",
+    "address": "M-Money",
+    "date": "1609459200000",
     "type": "1",
-    "body": "You received 10,000 RWF from John Doe.",
-    "amount": "10000",
-    "sender": "John Doe",
-    "receiver": "Peter Kamau"
+    "body": "You have received 2,000 RWF from Jane Smith...",
+    "amount": "2000",
+    "sender": "Jane Smith",
+    "receiver": "Account Holder"
   }
 ]
 ```
@@ -110,20 +112,20 @@ Retrieve a single transaction by its ID.
 
 **Request Example:**
 ```bash
-curl.exe -u admin:secret123 http://localhost:8000/transactions/1
+curl.exe -i -u admin:secret123 http://localhost:8000/transactions/1
 ```
 
 **Success Response — 200 OK:**
 ```json
 {
   "id": 1,
-  "address": "+250788000000",
-  "date": "1610000000000",
+  "address": "M-Money",
+  "date": "1609459200000",
   "type": "1",
-  "body": "You received 10,000 RWF from John Doe.",
-  "amount": "10000",
-  "sender": "John Doe",
-  "receiver": "Peter Kamau"
+  "body": "You have received 2,000 RWF from Jane Smith...",
+  "amount": "2000",
+  "sender": "Jane Smith",
+  "receiver": "Account Holder"
 }
 ```
 
@@ -137,7 +139,7 @@ curl.exe -u admin:secret123 http://localhost:8000/transactions/1
 ---
 
 ### 3. POST /transactions
-Create a new transaction record.
+Create a new transaction record. The body must be a non-empty JSON object.
 
 - **Method:** `POST`
 - **URL:** `/transactions`
@@ -145,10 +147,10 @@ Create a new transaction record.
 - **Content-Type:** `application/json`
 
 **Request Example:**
-```powershell
-$headers = @{ Authorization = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("admin:secret123")) }
-$body = '{"address":"+250788111222","amount":"5000","sender":"Alice","receiver":"Bob"}'
-Invoke-RestMethod -Uri "http://localhost:8000/transactions" -Method POST -Headers $headers -ContentType "application/json" -Body $body
+```bash
+curl.exe -i -u admin:secret123 -X POST http://localhost:8000/transactions \
+  -H "Content-Type: application/json" \
+  -d "{\"address\":\"+250788111222\",\"amount\":\"5000\",\"sender\":\"Alice\",\"receiver\":\"Bob\"}"
 ```
 
 **Request Body:**
@@ -175,13 +177,13 @@ Invoke-RestMethod -Uri "http://localhost:8000/transactions" -Method POST -Header
 **Error Responses:**
 | Code | Meaning |
 |------|---------|
-| 400 | Invalid or malformed JSON body |
+| 400 | Malformed JSON, non-object body (e.g. array), or empty body |
 | 401 | Missing or invalid credentials |
 
 ---
 
 ### 4. PUT /transactions/{id}
-Update an existing transaction record by ID.
+Partially update an existing transaction. Only the fields supplied in the body are changed — omitted fields keep their current values.
 
 - **Method:** `PUT`
 - **URL:** `/transactions/{id}`
@@ -189,12 +191,13 @@ Update an existing transaction record by ID.
 - **Content-Type:** `application/json`
 
 **Request Example:**
-```powershell
-$body = '{"amount":"12000"}'
-Invoke-RestMethod -Uri "http://localhost:8000/transactions/1" -Method PUT -Headers $headers -ContentType "application/json" -Body $body
+```bash
+curl.exe -i -u admin:secret123 -X PUT http://localhost:8000/transactions/2 \
+  -H "Content-Type: application/json" \
+  -d "{\"amount\":\"12000\"}"
 ```
 
-**Request Body (partial update supported):**
+**Request Body (partial update):**
 ```json
 {
   "amount": "12000"
@@ -204,21 +207,23 @@ Invoke-RestMethod -Uri "http://localhost:8000/transactions/1" -Method PUT -Heade
 **Success Response — 200 OK:**
 ```json
 {
-  "id": 1,
-  "address": "+250788000000",
-  "date": "1610000000000",
+  "id": 2,
+  "address": "M-Money",
+  "date": "1609459200000",
   "type": "1",
-  "body": "You received 10,000 RWF from John Doe.",
+  "body": "...",
   "amount": "12000",
-  "sender": "John Doe",
-  "receiver": "Peter Kamau"
+  "sender": "Account Holder",
+  "receiver": "Account Holder"
 }
 ```
+
+**Known Limitation:** PUT behaves as a partial update (`record.update()`). It does not replace the full record. Supplying a non-object body (e.g. an array) returns 400.
 
 **Error Responses:**
 | Code | Meaning |
 |------|---------|
-| 400 | ID not an integer, or invalid JSON body |
+| 400 | ID not an integer, malformed JSON, or non-object body |
 | 401 | Missing or invalid credentials |
 | 404 | Transaction with given ID not found |
 
@@ -232,14 +237,14 @@ Delete a transaction record by ID.
 - **Auth Required:** Yes
 
 **Request Example:**
-```powershell
-Invoke-RestMethod -Uri "http://localhost:8000/transactions/1" -Method DELETE -Headers $headers
+```bash
+curl.exe -i -u admin:secret123 -X DELETE http://localhost:8000/transactions/2
 ```
 
 **Success Response — 200 OK:**
 ```json
 {
-  "message": "Transaction 1 deleted successfully"
+  "message": "Transaction 2 deleted successfully"
 }
 ```
 
@@ -254,19 +259,19 @@ Invoke-RestMethod -Uri "http://localhost:8000/transactions/1" -Method DELETE -He
 
 ## Error Response Format
 
-All error responses follow this structure:
+All error responses use this structure:
 
 ```json
 {
-  "error": "Not Found",
-  "message": "Transaction not found"
+  "error": "Bad Request",
+  "message": "ID must be an integer"
 }
 ```
 
 | Field | Description |
 |-------|-------------|
 | `error` | Short HTTP status label |
-| `message` | Human-readable explanation |
+| `message` | Human-readable explanation of the specific problem |
 
 ---
 
@@ -276,6 +281,6 @@ All error responses follow this structure:
 |------|--------|----------------|
 | 200 | OK | Successful GET, PUT, DELETE |
 | 201 | Created | Successful POST |
-| 400 | Bad Request | Invalid ID format or malformed JSON |
+| 400 | Bad Request | Non-integer ID, malformed JSON, empty or non-object body |
 | 401 | Unauthorized | Missing or wrong credentials |
 | 404 | Not Found | Transaction ID does not exist or unknown endpoint |

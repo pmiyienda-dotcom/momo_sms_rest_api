@@ -1,0 +1,30 @@
+=== MoMo DSA Efficiency Benchmark ===
+Dataset Size               : 1691 records
+Iterations per method      : 10000
+Target ID (worst-case)     : 1691
+
+Linear Search  O(N) Time   : 3.056464 seconds
+Dictionary     O(1) Time   : 0.005470 seconds
+Speedup Factor             : 558.76x faster with dictionary
+
+--- Sample of first 20 records used in comparison ---
+  ID=1  amount=2000  type=1  sender=Jane Smith
+  ID=2  amount=1000  type=1  sender=Account Holder
+  ID=3  amount=600  type=1  sender=Account Holder
+  ID=4  amount=0.0  type=1  sender=Unknown
+  ID=5  amount=2000  type=1  sender=Account Holder
+  ID=6  amount=10000  type=1  sender=Account Holder
+  ID=7  amount=1000  type=1  sender=Account Holder
+  ID=8  amount=2000  type=1  sender=Account Holder
+  ID=9  amount=10900  type=1  sender=Account Holder
+  ID=10  amount=3500  type=1  sender=Account Holder
+  ID=11  amount=1000  type=1  sender=Account Holder
+  ID=12  amount=5000  type=1  sender=Account Holder
+  ID=13  amount=1700  type=1  sender=Account Holder
+  ID=14  amount=2000  type=1  sender=Account Holder
+  ID=15  amount=0.0  type=1  sender=Unknown
+  ID=16  amount=1800  type=1  sender=Account Holder
+  ID=17  amount=2500  type=1  sender=Account Holder
+  ID=18  amount=500  type=1  sender=Account Holder
+  ID=19  amount=0.0  type=1  sender=Unknown
+  ID=20  amount=1800  type=1  sender=Account Holder

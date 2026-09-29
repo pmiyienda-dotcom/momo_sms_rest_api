@@ -7,16 +7,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from auth import authenticate_credentials
 
 
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock_db.json")
+
+
 def load_db():
     try:
-        with open("api/mock_db.json", "r") as f:
+        with open(DB_PATH, "r") as f:
             return json.load(f)
     except Exception:
         return []
 
 
 def save_db(data):
-    with open("api/mock_db.json", "w") as f:
+    with open(DB_PATH, "w") as f:
         json.dump(data, f, indent=4)
 
 
@@ -84,6 +87,13 @@ class RESTApiHandler(BaseHTTPRequestHandler):
                 body = self.rfile.read(content_length).decode("utf-8")
                 post_data = json.loads(body) if body else {}
 
+                if not isinstance(post_data, dict) or not post_data:
+                    self._send_response(
+                        400,
+                        {"error": "Bad Request", "message": "JSON body must be a non-empty object"},
+                    )
+                    return
+
                 new_id = max([t.get("id", 0) for t in db], default=0) + 1
                 post_data["id"] = new_id
                 db.append(post_data)
@@ -112,7 +122,21 @@ class RESTApiHandler(BaseHTTPRequestHandler):
                 if record:
                     content_length = int(self.headers.get("Content-Length", 0))
                     body = self.rfile.read(content_length).decode("utf-8")
-                    update_data = json.loads(body) if body else {}
+                    try:
+                        update_data = json.loads(body) if body else {}
+                    except json.JSONDecodeError:
+                        self._send_response(
+                            400,
+                            {"error": "Bad Request", "message": "Invalid JSON body"},
+                        )
+                        return
+
+                    if not isinstance(update_data, dict):
+                        self._send_response(
+                            400,
+                            {"error": "Bad Request", "message": "JSON body must be an object"},
+                        )
+                        return
 
                     record.update(update_data)
                     record["id"] = tx_id
@@ -128,11 +152,6 @@ class RESTApiHandler(BaseHTTPRequestHandler):
                 self._send_response(
                     400,
                     {"error": "Bad Request", "message": "ID must be an integer"},
-                )
-            except json.JSONDecodeError:
-                self._send_response(
-                    400,
-                    {"error": "Bad Request", "message": "Invalid JSON payload"},
                 )
         else:
             self._send_response(404, {"error": "Endpoint not found"})

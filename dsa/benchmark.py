@@ -21,15 +21,18 @@ def run_benchmark():
     with open(DB_PATH, "r") as f:
         transactions_list = json.load(f)
 
-    # Use first 20 records minimum as required, but benchmark full dataset
+    if not transactions_list:
+        print("Error: mock_db.json is empty. Run python dsa/parse_xml.py first.")
+        return
+
     sample = transactions_list[:20]
     print(f"Total records loaded      : {len(transactions_list)}")
-    print(f"Sample used for display   : {len(sample)} records")
+    print(f"Sample shown (first 20)   : {len(sample)} records")
 
     # Build dict keyed by integer id
     transactions_dict = {t["id"]: t for t in transactions_list}
 
-    # Target: last record in full list 
+    # Target: last record in full list (worst-case for linear search)
     target_id = transactions_list[-1]["id"]
     iterations = 10000
 
